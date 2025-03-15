@@ -42,11 +42,12 @@ def upload_video():
 
     return "Quadro recebido", 200
 
+last_posted_text = ""
 @app.route('/get-result', methods=['GET'])
 def display_result():
-    global current_readed_text, app_should_read
+    global app_should_read, last_posted_text
     return {"should_read" : app_should_read,
-            "last_read" : current_readed_text
+            "last_read" : last_posted_text
             }
 
 """
@@ -66,15 +67,26 @@ def process_image():
 
 
 display_active = True 
+sucessful_frame_count = 0
 def display_frames():
-    global frame_queue, display_active, last_readed_text, current_readed_text, app_should_read
+    global frame_queue, display_active, last_readed_text, current_readed_text, app_should_read,sucessful_frame_count,last_posted_text
     while display_active:
         if not frame_queue.empty():
             processed_frame, predicted_text = aiLayer(frame_queue.get())
-            if (predicted_text != None and predicted_text != last_readed_text):
-                app_should_read = True
-                last_readed_text = predicted_text
+            if (predicted_text != None):
+                last_readed_text = current_readed_text
                 current_readed_text = predicted_text
+                if current_readed_text == last_readed_text:
+                    sucessful_frame_count +=1
+                else:
+                    sucessful_frame_count = 0
+                
+                if (sucessful_frame_count >= 3 and current_readed_text != last_posted_text):
+                    app_should_read = True
+                    sucessful_frame_count = 0
+                    last_posted_text = current_readed_text 
+                else:
+                    app_should_read = False
             else: 
                 app_should_read = False
             cv2.imshow("Frame Recebido", processed_frame)
